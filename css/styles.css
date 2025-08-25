@@ -1,0 +1,42 @@
+/* ===== MOBILE-FIRST DESIGN ===== */
+:root{
+  --accent:#3f77ff;
+  --bg:#f7f9ff;
+  --card:#ffffff;
+  --radius:14px;
+  --shadow:0 6px 18px rgba(0,0,0,.06);
+  font-family:'Inter',system-ui,Arial;
+}
+*,*:before,*:after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#222}
+
+.logo-img{width:32px;height:32px;vertical-align:middle;margin-right:.5rem}
+
+button,input,select{
+  font-family:inherit;font-size:1rem;border-radius:8px;border:1px solid #ccc;
+  padding:.85rem 1rem;width:100%;
+}
+button{cursor:pointer;transition:.25s}
+button.primary{background:var(--accent);color:#fff;border:none}
+button.primary:hover{opacity:.9}
+
+.center{display:flex;justify-content:center;align-items:center;height:100%}
+.card{background:var(--card);padding:2.2rem 2.6rem;border-radius:var(--radius);box-shadow:var(--shadow);width:clamp(280px,92vw,380px)}
+
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.85rem 1rem;background:var(--card);box-shadow:var(--shadow)
+}
+header .title{display:flex;align-items:center;font-weight:700;font-size:1.05rem}
+header button{background:none;border:none;color:#666}
+
+.converter{max-width:620px;margin:2rem auto;padding:0 1rem}
+.row{display:flex;gap:.7rem;flex-wrap:wrap}
+#flip{width:42px;font-size:1.15rem;background:var(--card)}
+
+.result{font-size:1.25rem;font-weight:600;margin-top:1rem}
+.chart-wrapper{max-width:680px;margin:2.5rem auto 0;padding:0 1rem}
+
+@media(min-width:600px){
+  .row{flex-wrap:nowrap}
+}

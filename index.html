@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Add to head -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#007bff"/>
+<link rel="apple-touch-icon" href="/images/icon-192.png">
+<link rel="manifest" href="manifest.json">
+
+<title>MoneyFlip • Login</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="https://img.icons8.com/color/48/currency-exchange.png">
+<style>
+:root{--accent:#3f77ff;--bg:#f7f9ff;--card:#fff;--radius:14px;--shadow:0 6px 18px rgba(0,0,0,.06);
+      font-family:'Inter',system-ui,Arial}
+html,body{margin:0;height:100%;background:var(--bg);display:flex;justify-content:center;align-items:center}
+.card{background:var(--card);padding:2.2rem 2.6rem;border-radius:var(--radius);box-shadow:var(--shadow);width:clamp(280px,92vw,380px)}
+h1{margin:0 0 1.4rem;text-align:center;font-size:1.7rem}
+button,input{width:100%;padding:.85rem 1rem;margin:.55rem 0;border:1px solid #ccc;border-radius:8px;font-size:1rem}
+button{background:var(--accent);color:#fff;border:none;cursor:pointer;transition:.25s}
+button:hover{opacity:.9}
+a{color:var(--accent);font-weight:600;text-decoration:none;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<main class="card">
+  <h1>💱 MoneyFlip</h1>
+
+  <form id="loginForm">
+    <input type="email"    id="email"    placeholder="Email"    required>
+    <input type="password" id="password" placeholder="Password" required minlength="6">
+    <button type="submit">Sign In</button>
+  </form>
+
+  <p style="text-align:center;margin-top:.6rem">
+     No account? <a href="#" id="toggle">Create one →</a>
+  </p>
+</main>
+
+<script>
+/* ===== demo-only auth in localStorage ===== */
+document.addEventListener('DOMContentLoaded',()=>{
+  const LS='mf_users';
+  const form=document.getElementById('loginForm');
+  const toggle=document.getElementById('toggle');
+  let signup=false;
+
+  toggle.onclick=e=>{
+    e.preventDefault();
+    signup=!signup;
+    form.querySelector('button').textContent = signup?'Sign Up':'Sign In';
+    toggle.textContent = signup?'← Sign in instead':'Create one →';
+  };
+
+  form.onsubmit=e=>{
+    e.preventDefault();
+    const email=form.email.value.trim(), pass=form.password.value;
+    const users=JSON.parse(localStorage.getItem(LS)||'{}');
+
+    if(signup){
+      if(users[email]) return alert('User already exists');
+      users[email]=btoa(pass);           // store simple hash
+      localStorage.setItem(LS,JSON.stringify(users));
+      alert('Account created ✔');        // <-- you should see this
+      sessionStorage.setItem('logged','1');
+      location='app.html';               // auto-enter
+      return;
+    }
+
+    if(users[email] && users[email]===btoa(pass)){
+      sessionStorage.setItem('logged','1');
+      location='app.html';
+    }else alert('Wrong credentials');
+  };
+});
+</script>
+<!-- Add before </body> closing tag -->
+<script>
+  // Register the service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered successfully:', registration);
+        })
+        .catch(error => {
+          console.log('Service Worker registration failed:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>

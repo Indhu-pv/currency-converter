@@ -1,0 +1,150 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MoneyFlip • Converter</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="https://img.icons8.com/color/48/currency-exchange.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+
+<!--  =======  STYLE (unchanged)  =======  -->
+<style>
+:root{--bg:#eef2ff;--card:rgba(255,255,255,.55);--text:#222;--accent:#5568ff;
+--shadow:0 18px 38px rgba(0,0,0,.12);--grad-1:#8c7eff;--grad-2:#54d6ff;
+--bg-dark:#0e111b;--card-dark:rgba(25,25,39,.6);--text-dark:#f5f7ff}
+html,body{margin:0;height:100%;font-family:'Inter',system-ui,Arial;background:var(--bg);color:var(--text);transition:.35s}
+body.dark{background:var(--bg-dark);color:var(--text-dark)}
+body.dark .card{background:var(--card-dark);backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+body.dark select,body.dark input{background:rgba(255,255,255,.05);color:var(--text-dark);border:1px solid #444}
+header{display:flex;justify-content:space-between;align-items:center;padding:.85rem 1rem}
+header .title{display:flex;align-items:center;font-weight:700;font-size:1.05rem}
+header img{width:34px;margin-right:.45rem}
+header button{background:none;border:none;color:inherit;cursor:pointer;font-size:.9rem;opacity:.7}
+header button:hover{opacity:1}
+main{display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+.card{width:clamp(280px,95vw,420px);background:var(--card);border-radius:18px;padding:1.8rem 1.4rem 2rem;box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+.row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.2rem}
+input[type=number],select{flex:1 1 130px;padding:.9rem 1rem;font-size:1rem;border:1px solid #c3c6ff;border-radius:10px;background:#fff;transition:.2s}
+#swap{width:42px;font-size:1.25rem;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(135deg,var(--grad-1),var(--grad-2));color:#fff}
+#swap:active{transform:scale(.9)}
+button.convert{width:100%;padding:1rem 1.2rem;margin-top:.4rem;font-size:1.05rem;font-weight:600;border:none;border-radius:12px;background:linear-gradient(135deg,var(--grad-1),var(--grad-2));color:#fff;cursor:pointer;transition:.25s;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+button.convert:hover{opacity:.9}
+.result{font-size:1.25rem;font-weight:700;text-align:center;margin-top:1.2rem;min-height:1.5em}
+.theme-switch{display:flex;gap:.6rem;justify-content:center;margin:1.4rem 0 .5rem;font-size:.85rem}
+.theme-switch label{cursor:pointer;display:flex;align-items:center;gap:.25rem}
+.theme-switch input{accent-color:var(--accent)}
+canvas{margin-top:1.8rem;max-width:100%}
+</style>
+</head>
+
+<body>
+<header>
+  <span class="title"><img src="https://img.icons8.com/color/96/currency-exchange.png" alt="">MoneyFlip</span>
+  <button id="logout">Logout</button>
+</header>
+
+<main>
+  <section class="card">
+    <div class="row">
+      <input type="number" id="amount" value="1" min="0" step="any">
+      <select id="from"></select>
+      <button id="swap" aria-label="Swap">↺</button>
+      <select id="to"></select>
+    </div>
+
+    <button class="convert" id="convert">Convert</button>
+    <p class="result" id="result"></p>
+
+    <div class="theme-switch">
+      <label><input type="radio" name="th" value="light" checked> Light</label>
+      <label><input type="radio" name="th" value="dark"> Dark</label>
+    </div>
+
+    <canvas id="trend" height="120"></canvas>
+  </section>
+</main>
+
+<!--  =======  SCRIPT  =======  -->
+<script>
+/* 1 — route guard */
+if (!sessionStorage.getItem('logged')) location = 'index.html';
+
+/* 2 — currency list (15) */
+const CURS = [
+ ['USD','United States Dollar'],['EUR','Euro'],['GBP','British Pound'],
+ ['JPY','Japanese Yen'],['AUD','Australian Dollar'],['CAD','Canadian Dollar'],
+ ['CHF','Swiss Franc'],['CNY','Chinese Yuan'],['INR','Indian Rupee'],
+ ['SGD','Singapore Dollar'],['NZD','New Zealand Dollar'],['ZAR','South African Rand'],
+ ['SEK','Swedish Krona'],['NOK','Norwegian Krone'],['KRW','South Korean Won']
+];
+const fSel = document.getElementById('from'),
+      tSel = document.getElementById('to');
+
+CURS.forEach(([c,n])=>{
+  const o1 = new Option(`${c} – ${n}`,c),
+        o2 = o1.cloneNode(true);
+  fSel.add(o1);  tSel.add(o2);
+});
+fSel.value='USD'; tSel.value='EUR';
+
+/* 3 — DOM helpers */
+const amt  = document.getElementById('amount'),
+      res  = document.getElementById('result');
+document.getElementById('logout').onclick = ()=>{sessionStorage.clear();location='index.html'};
+document.getElementById('swap').onclick   = ()=>{[fSel.value,tSel.value]=[tSel.value,fSel.value]};
+document.getElementById('convert').onclick = convert;
+document.querySelectorAll('input[name="th"]').forEach(r=>r.onchange=()=>document.body.classList.toggle('dark',r.value==='dark'));
+
+/* 4 — FREE conversion endpoint (no key, CORS-friendly) */
+const FREE_LATEST = 'https://open.er-api.com/v6/latest/';   // append base code
+
+/* 5 — single global Chart instance */
+let chart;
+
+/* 6 — Convert with fallback */
+async function convert(){
+  const amount = parseFloat(amt.value)||0,
+        base   = fSel.value,
+        quote  = tSel.value;
+  if(!amount){res.textContent='⚠️ Enter an amount';return;}
+  res.textContent='…';
+  try{
+      const data = await fetch(`${FREE_LATEST}${base}`).then(r=>r.json());
+      if(data.result!=='success' || !data.rates || !data.rates[quote])
+         throw new Error('rate missing');
+      const rate  = data.rates[quote];
+      const value = rate * amount;
+      res.textContent = `${amount} ${base} = ${value.toFixed(2)} ${quote}`;
+      drawChart(base, quote);
+  }catch(e){
+      console.error('Conversion error →',e);
+      res.textContent='⚠️ Network error';
+  }
+}
+
+/* 7 — 30-day line chart (unchanged, still reliable) */
+async function drawChart(base,quote){
+  const end  = new Date().toISOString().split('T')[0],
+        start= new Date(Date.now()-29*864e5).toISOString().split('T')[0],
+        url  = `https://api.exchangerate.host/timeseries?base=${base}&symbols=${quote}&start_date=${start}&end_date=${end}`;
+  try{
+    const {rates}=await fetch(url).then(r=>r.json());
+    if(!rates) return;
+    const labels = Object.keys(rates).sort(),
+          data   = labels.map(d=>rates[d][quote]);
+    chart?.destroy();
+    chart= new Chart(document.getElementById('trend'),{
+       type:'line',
+       data:{labels,datasets:[{data,borderColor:'rgba(85,104,255,.9)',fill:false,tension:.25}]},
+       options:{plugins:{legend:{display:false}},scales:{x:{display:false}}}
+    });
+  }catch(e){console.warn('Chart skipped',e);}
+}
+
+/* 8 — initial auto-run */
+convert();
+</script>
+</body>
+</html>
+
