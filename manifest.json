@@ -2,7 +2,7 @@
   "name": "Currency Converter Pro",
   "short_name": "Currency",
   "description": "A fast and simple app to convert currencies.",
-  "start_url": "/index.html",
+  "start_url": "/currency-converter/",  
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007bff",
